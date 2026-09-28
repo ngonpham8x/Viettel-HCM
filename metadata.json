@@ -1,0 +1,6 @@
+{
+  "name": "dichvu-viettel",
+  "description": "Cổng thông tin đăng ký dịch vụ cáp quang FTTH, TV360, Sim 4G/5G, Camera AI Cloud và ePass Viettel. Hotline tư vấn: 0966.110.357 Mr. Tuấn.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
