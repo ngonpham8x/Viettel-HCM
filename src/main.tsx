@@ -10,7 +10,9 @@ initPWAInstallListener();
 // Register PWA Service Worker
 if ('serviceWorker' in navigator && process.env.NODE_ENV !== 'test') {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').catch((err) => {
+    navigator.serviceWorker.register('./sw.js').then((reg) => {
+      reg.update().catch(() => {});
+    }).catch((err) => {
       console.warn('Service worker registration note:', err);
     });
   });

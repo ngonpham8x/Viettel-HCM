@@ -1,5 +1,5 @@
-// Viettel Telecom Service Worker for PWA
-const CACHE_NAME = 'viettel-telecom-pwa-v4';
+// Viettel Telecom Service Worker for PWA (v5 - Network-First for HTML/Navigation)
+const CACHE_NAME = 'viettel-telecom-pwa-v5';
 const PRECACHE_ASSETS = [
   '/',
   '/index.html',
@@ -8,7 +8,6 @@ const PRECACHE_ASSETS = [
   '/icon-192.png',
   '/icon-512.png',
   '/apple-touch-icon.png',
-  '/apple-touch-icon-precomposed.png',
   '/favicon.png',
   '/favicon.svg'
 ];
@@ -17,7 +16,7 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(PRECACHE_ASSETS).catch((err) => {
-        console.warn('Precache warning:', err);
+        console.warn('Precache notice:', err);
       });
     })
   );
@@ -30,6 +29,7 @@ self.addEventListener('activate', (event) => {
       return Promise.all(
         keys.map((key) => {
           if (key !== CACHE_NAME) {
+            console.log('Clearing old service worker cache:', key);
             return caches.delete(key);
           }
         })
@@ -43,30 +43,40 @@ self.addEventListener('fetch', (event) => {
   // Only handle GET requests
   if (event.request.method !== 'GET') return;
 
+  // For HTML documents / navigation: Network First (ensures user always gets latest app updates)
+  if (event.request.mode === 'navigate' || event.request.headers.get('accept')?.includes('text/html')) {
+    event.respondWith(
+      fetch(event.request)
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
+            const responseClone = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
+          }
+          return networkResponse;
+        })
+        .catch(() => {
+          return caches.match('/index.html') || caches.match('/');
+        })
+    );
+    return;
+  }
+
+  // For static assets (images, icons): Stale While Revalidate
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        // Fetch in background to update cache (stale-while-revalidate)
-        fetch(event.request)
-          .then((networkResponse) => {
-            if (networkResponse && networkResponse.status === 200) {
-              caches.open(CACHE_NAME).then((cache) => {
-                cache.put(event.request, networkResponse);
-              });
-            }
-          })
-          .catch(() => {
-            // Network fail, offline
-          });
-        return cachedResponse;
-      }
+      const fetchPromise = fetch(event.request)
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
+            const responseClone = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
+          }
+          return networkResponse;
+        })
+        .catch(() => {
+          // Fallback if offline
+        });
 
-      return fetch(event.request).catch(() => {
-        // Return root page if navigation request fails
-        if (event.request.mode === 'navigate') {
-          return caches.match('./index.html') || caches.match('/');
-        }
-      });
+      return cachedResponse || fetchPromise;
     })
   );
 });

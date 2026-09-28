@@ -25,7 +25,14 @@ import {
   Check,
   Eye,
   EyeOff,
-  Layers
+  Layers,
+  Maximize2,
+  Minimize2,
+  ZoomIn,
+  ZoomOut,
+  RotateCcw,
+  LayoutGrid,
+  List
 } from 'lucide-react';
 import { CustomerLead, TelecomPackage } from '../types';
 import { AdminPackagesManager } from './AdminPackagesManager';
@@ -82,6 +89,13 @@ export const AdminLeadsModal: React.FC<AdminLeadsModalProps> = ({
   const [authSuccessMsg, setAuthSuccessMsg] = useState<string>('');
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [isFullScreen, setIsFullScreen] = useState(false);
+  const [zoomLevel, setZoomLevel] = useState<number>(100);
+  const [leadViewMode, setLeadViewMode] = useState<'table' | 'cards'>('table');
+
+  const handleZoomIn = () => setZoomLevel((prev) => Math.min(prev + 15, 150));
+  const handleZoomOut = () => setZoomLevel((prev) => Math.max(prev - 15, 80));
+  const handleZoomReset = () => setZoomLevel(100);
 
   // Tab & Filter States
   const [activeTab, setActiveTab] = useState<'leads' | 'packages' | 'analytics'>('leads');
@@ -242,10 +256,11 @@ export const AdminLeadsModal: React.FC<AdminLeadsModalProps> = ({
   };
 
   return (
-    <div id="admin-leads-modal-overlay" className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-xs">
+    <div id="admin-leads-modal-overlay" className={`fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xs transition-all ${isFullScreen ? "p-0" : "p-2 sm:p-4"}`}>
       <div 
         id="admin-leads-modal-container" 
-        className="relative w-full max-w-5xl bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col h-[92vh]"
+        className={`relative w-full bg-white shadow-2xl border border-slate-200 overflow-hidden flex flex-col transition-all duration-200 ${isFullScreen ? "h-screen w-screen max-w-none rounded-none" : "max-w-7xl h-[95vh] rounded-2xl"}`}
+        style={{ zoom: `${zoomLevel}%` }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -299,10 +314,62 @@ export const AdminLeadsModal: React.FC<AdminLeadsModalProps> = ({
                 </button>
               </>
             )}
+            {/* Zoom In / Zoom Out Controls */}
+            <div className="flex items-center bg-slate-900 border border-slate-700/80 rounded-lg p-0.5 text-xs text-slate-300">
+              <button
+                type="button"
+                onClick={handleZoomOut}
+                title="Thu nhỏ cỡ chữ & bảng"
+                disabled={zoomLevel <= 80}
+                className="p-1.5 hover:bg-slate-800 disabled:opacity-40 text-slate-300 hover:text-white rounded-md transition-colors cursor-pointer"
+              >
+                <ZoomOut className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={handleZoomReset}
+                title="Cỡ chuẩn 100% (Nhấn để đặt lại)"
+                className="px-2 py-0.5 hover:bg-slate-800 font-mono font-bold text-[11px] text-emerald-400 hover:text-white rounded-md transition-colors cursor-pointer"
+              >
+                {zoomLevel}%
+              </button>
+              <button
+                type="button"
+                onClick={handleZoomIn}
+                title="Phóng to cỡ chữ & bảng"
+                disabled={zoomLevel >= 150}
+                className="p-1.5 hover:bg-slate-800 disabled:opacity-40 text-slate-300 hover:text-white rounded-md transition-colors cursor-pointer"
+              >
+                <ZoomIn className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {/* Fullscreen Toggle Button */}
+            <button
+              id="btn-toggle-fullscreen"
+              type="button"
+              onClick={() => setIsFullScreen(!isFullScreen)}
+              title={isFullScreen ? 'Thu nhỏ cửa sổ' : 'Phóng to toàn màn hình'}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-sm ${isFullScreen ? "bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 border border-amber-500/40" : "bg-emerald-600 hover:bg-emerald-500 text-white"}`}
+            >
+              {isFullScreen ? (
+                <>
+                  <Minimize2 className="w-4 h-4 text-amber-300" />
+                  <span className="hidden sm:inline font-semibold">Thu Nhỏ</span>
+                </>
+              ) : (
+                <>
+                  <Maximize2 className="w-4 h-4 text-white" />
+                  <span className="font-semibold">Toàn Màn Hình</span>
+                </>
+              )}
+            </button>
+
             <button
               id="btn-close-admin-modal"
               onClick={handleModalClose}
               className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors cursor-pointer"
+              title="Đóng quản trị"
             >
               <X className="w-5 h-5" />
             </button>
@@ -598,6 +665,32 @@ export const AdminLeadsModal: React.FC<AdminLeadsModalProps> = ({
                       <option value="installed">Đã lắp đặt</option>
                       <option value="cancelled">Hủy</option>
                     </select>
+                    {/* View Switcher: Bảng hoặc Thẻ */}
+                    <div className="flex items-center bg-slate-100 border border-slate-300 rounded-lg p-0.5">
+                      <button
+                        type="button"
+                        onClick={() => setLeadViewMode("table")}
+                        title="Xem dạng danh sách bảng"
+                        className={`px-2 py-1 rounded-md text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer ${
+                          leadViewMode === "table" ? "bg-white text-slate-900 shadow-xs" : "text-slate-500 hover:text-slate-900"
+                        }`}
+                      >
+                        <List className="w-3.5 h-3.5" />
+                        <span className="hidden md:inline">Bảng</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setLeadViewMode("cards")}
+                        title="Xem dạng ô thẻ lớn dễ đọc"
+                        className={`px-2 py-1 rounded-md text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer ${
+                          leadViewMode === "cards" ? "bg-white text-slate-900 shadow-xs" : "text-slate-500 hover:text-slate-900"
+                        }`}
+                      >
+                        <LayoutGrid className="w-3.5 h-3.5" />
+                        <span className="hidden md:inline">Thẻ</span>
+                      </button>
+                    </div>
+
                     <button
                       id="btn-clear-leads-table"
                       onClick={handleClearAllLeads}
@@ -605,7 +698,7 @@ export const AdminLeadsModal: React.FC<AdminLeadsModalProps> = ({
                       title="Xóa toàn bộ dữ liệu đơn ảo / thử nghiệm"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
-                      <span>Xóa Dữ Liệu Ảo</span>
+                      <span className="hidden sm:inline">Xóa Dữ Liệu Ảo</span>
                     </button>
                     <button
                       onClick={handleExport}
@@ -618,120 +711,209 @@ export const AdminLeadsModal: React.FC<AdminLeadsModalProps> = ({
                   </div>
                 </div>
 
-                {/* Leads Table */}
-                <div className="flex-1 overflow-y-auto border border-slate-200 rounded-xl">
+                {/* Leads Content: Table or Cards View */}
+                <div className="flex-1 overflow-auto border border-slate-200 rounded-xl p-2 sm:p-3 bg-slate-50/50">
                   {filteredLeads.length === 0 ? (
                     <div className="text-center py-12 text-slate-400">
                       <UserCheck className="w-12 h-12 mx-auto mb-2 opacity-40" />
                       <p className="text-sm font-semibold">Chưa có đơn đăng ký nào phù hợp</p>
                     </div>
-                  ) : (
-                    <table className="w-full text-left text-xs border-collapse">
-                      <thead className="bg-slate-100 text-slate-700 sticky top-0 font-bold border-b border-slate-200 z-10">
-                        <tr>
-                          <th className="p-3">Thời gian</th>
-                          <th className="p-3">Khách hàng</th>
-                          <th className="p-3">Gói cước</th>
-                          <th className="p-3">Địa chỉ & Tọa độ GPS</th>
-                          <th className="p-3">Trạng thái</th>
-                          <th className="p-3 text-right">Thao tác</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {filteredLeads.map((lead) => (
-                          <tr key={lead.id} className="hover:bg-slate-50 transition-colors">
-                            <td className="p-3 text-slate-500 whitespace-nowrap">
-                              {new Date(lead.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
-                              <br />
-                              <span className="text-[10px] text-slate-400">
-                                {new Date(lead.createdAt).toLocaleDateString('vi-VN')}
-                              </span>
-                            </td>
-                            <td className="p-3">
-                              <div className="font-bold text-slate-900">{lead.fullName}</div>
-                              <a 
-                                href={`tel:${lead.phoneNumber}`} 
-                                className="text-red-600 font-mono font-bold flex items-center gap-1 hover:underline mt-0.5"
-                              >
-                                <Phone className="w-3 h-3" />
-                                {lead.phoneNumber}
-                              </a>
-                            </td>
-                            <td className="p-3">
-                              <div className="font-semibold text-slate-800">{lead.serviceName}</div>
-                              <div className="text-[11px] text-slate-500">
-                                {lead.paymentPlan === '12months' ? 'Đóng 12T (Tặng 1T)' : lead.paymentPlan === '6months' ? 'Đóng 6T' : 'Hàng tháng'} - {lead.estimatedCost.toLocaleString('vi-VN')} đ
+                  ) : leadViewMode === "cards" ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {filteredLeads.map((lead) => (
+                        <div key={lead.id} className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs hover:shadow-md transition-shadow space-y-3 flex flex-col justify-between">
+                          <div className="space-y-2">
+                            <div className="flex items-start justify-between gap-2">
+                              <div>
+                                <div className="font-bold text-slate-900 text-sm">{lead.fullName}</div>
+                                <div className="text-[11px] text-slate-500">
+                                  {new Date(lead.createdAt).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })} • {new Date(lead.createdAt).toLocaleDateString("vi-VN")}
+                                </div>
                               </div>
-                            </td>
-                            <td className="p-3 max-w-xs">
-                              <div className="text-slate-800 font-medium truncate" title={lead.address}>
-                                {lead.address} ({lead.province || 'Toàn quốc'})
+                              {getStatusBadge(lead.status)}
+                            </div>
+
+                            <div className="bg-slate-50 p-2.5 rounded-lg text-xs space-y-1 border border-slate-100">
+                              <div className="font-bold text-red-600">{lead.serviceName}</div>
+                              <div className="text-slate-600 font-medium">
+                                {lead.paymentPlan === "12months" ? "Đóng 12T (Tặng 1T)" : lead.paymentPlan === "6months" ? "Đóng 6T" : "Hàng tháng"} - <span className="font-bold text-slate-900">{lead.estimatedCost.toLocaleString("vi-VN")} đ</span>
+                              </div>
+                            </div>
+
+                            <div className="text-xs text-slate-700">
+                              <div className="flex items-start gap-1">
+                                <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
+                                <span className="font-medium line-clamp-2">{lead.address} ({lead.province || "Toàn quốc"})</span>
                               </div>
                               {lead.gpsLocation ? (
                                 <a
                                   href={`https://www.google.com/maps?q=${lead.gpsLocation.latitude},${lead.gpsLocation.longitude}`}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-md hover:bg-emerald-100 transition-colors mt-0.5"
-                                  title="Mở trên Google Maps"
+                                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md hover:bg-emerald-100 transition-colors mt-1.5"
                                 >
                                   <MapPin className="w-3 h-3 text-emerald-600" />
                                   GPS: {lead.gpsLocation.latitude.toFixed(4)}, {lead.gpsLocation.longitude.toFixed(4)}
                                   <ExternalLink className="w-2.5 h-2.5" />
                                 </a>
                               ) : (
-                                <span className="text-[10px] text-slate-400 italic">Khách chưa cấp quyền GPS</span>
+                                <div className="text-[10px] text-slate-400 italic mt-1">Khách chưa cấp quyền GPS</div>
                               )}
-                            </td>
-                            <td className="p-3 whitespace-nowrap">
-                              <div className="space-y-1">
-                                {getStatusBadge(lead.status)}
-                                <div>
-                                  <select
-                                    value={lead.status}
-                                    onChange={(e) => handleStatusChange(lead.id, e.target.value as CustomerLead['status'])}
-                                    className="text-[11px] bg-white border border-slate-300 rounded px-1.5 py-0.5 text-slate-700 cursor-pointer"
-                                  >
-                                    <option value="new">Mới</option>
-                                    <option value="contacted">Đã liên hệ</option>
-                                    <option value="surveyed">Đã khảo sát</option>
-                                    <option value="installed">Đã lắp đặt</option>
-                                    <option value="cancelled">Hủy</option>
-                                  </select>
-                                </div>
-                              </div>
-                            </td>
-                            <td className="p-3 text-right whitespace-nowrap">
-                              <div className="flex items-center justify-end gap-1.5">
-                                <a
-                                  href={`tel:${lead.phoneNumber}`}
-                                  title="Gọi ngay"
-                                  className="p-1.5 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 transition-colors"
-                                >
-                                  <Phone className="w-3.5 h-3.5" />
-                                </a>
-                                <a
-                                  href={`https://zalo.me/${lead.phoneNumber.replace(/[^0-9]/g, '')}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  title="Mở Zalo"
-                                  className="p-1.5 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors text-[10px] font-bold"
-                                >
-                                  Zalo
-                                </a>
-                                <button
-                                  onClick={() => handleDelete(lead.id)}
-                                  title="Xóa đơn"
-                                  className="p-1.5 bg-slate-100 text-slate-500 rounded-lg hover:bg-red-100 hover:text-red-600 transition-colors"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
-                              </div>
-                            </td>
+                            </div>
+                          </div>
+
+                          <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
+                            <select
+                              value={lead.status}
+                              onChange={(e) => handleStatusChange(lead.id, e.target.value as CustomerLead["status"])}
+                              className="text-xs bg-slate-50 border border-slate-300 rounded-lg px-2 py-1.5 text-slate-700 font-medium cursor-pointer"
+                            >
+                              <option value="new">Mới đăng ký</option>
+                              <option value="contacted">Đã liên hệ</option>
+                              <option value="surveyed">Đã khảo sát</option>
+                              <option value="installed">Đã lắp đặt</option>
+                              <option value="cancelled">Hủy đơn</option>
+                            </select>
+
+                            <div className="flex items-center gap-1.5">
+                              <a
+                                href={`tel:${lead.phoneNumber}`}
+                                className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold flex items-center gap-1 shadow-xs cursor-pointer"
+                                title="Gọi ngay"
+                              >
+                                <Phone className="w-3.5 h-3.5" />
+                                Gọi
+                              </a>
+                              <a
+                                href={`https://zalo.me/${lead.phoneNumber.replace(/[^0-9]/g, "")}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold cursor-pointer"
+                                title="Chat Zalo"
+                              >
+                                Zalo
+                              </a>
+                              <button
+                                onClick={() => handleDelete(lead.id)}
+                                className="p-1.5 bg-slate-100 text-slate-500 hover:bg-red-100 hover:text-red-600 rounded-lg transition-colors cursor-pointer"
+                                title="Xóa đơn"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="bg-white rounded-lg overflow-x-auto shadow-xs border border-slate-200">
+                      <table className="w-full min-w-[750px] text-left text-xs border-collapse">
+                        <thead className="bg-slate-100 text-slate-700 sticky top-0 font-bold border-b border-slate-200 z-10">
+                          <tr>
+                            <th className="p-3">Thời gian</th>
+                            <th className="p-3">Khách hàng</th>
+                            <th className="p-3">Gói cước</th>
+                            <th className="p-3">Địa chỉ & Tọa độ GPS</th>
+                            <th className="p-3">Trạng thái</th>
+                            <th className="p-3 text-right">Thao tác</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {filteredLeads.map((lead) => (
+                            <tr key={lead.id} className="hover:bg-slate-50 transition-colors">
+                              <td className="p-3 text-slate-500 whitespace-nowrap">
+                                {new Date(lead.createdAt).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}
+                                <br />
+                                <span className="text-[10px] text-slate-400">
+                                  {new Date(lead.createdAt).toLocaleDateString("vi-VN")}
+                                </span>
+                              </td>
+                              <td className="p-3">
+                                <div className="font-bold text-slate-900">{lead.fullName}</div>
+                                <a 
+                                  href={`tel:${lead.phoneNumber}`} 
+                                  className="text-red-600 font-mono font-bold flex items-center gap-1 hover:underline mt-0.5"
+                                >
+                                  <Phone className="w-3 h-3" />
+                                  {lead.phoneNumber}
+                                </a>
+                              </td>
+                              <td className="p-3">
+                                <div className="font-semibold text-slate-800">{lead.serviceName}</div>
+                                <div className="text-[11px] text-slate-500">
+                                  {lead.paymentPlan === "12months" ? "Đóng 12T (Tặng 1T)" : lead.paymentPlan === "6months" ? "Đóng 6T" : "Hàng tháng"} - {lead.estimatedCost.toLocaleString("vi-VN")} đ
+                                </div>
+                              </td>
+                              <td className="p-3 max-w-xs">
+                                <div className="text-slate-800 font-medium truncate" title={lead.address}>
+                                  {lead.address} ({lead.province || "Toàn quốc"})
+                                </div>
+                                {lead.gpsLocation ? (
+                                  <a
+                                    href={`https://www.google.com/maps?q=${lead.gpsLocation.latitude},${lead.gpsLocation.longitude}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-md hover:bg-emerald-100 transition-colors mt-0.5"
+                                    title="Mở trên Google Maps"
+                                  >
+                                    <MapPin className="w-3 h-3 text-emerald-600" />
+                                    GPS: {lead.gpsLocation.latitude.toFixed(4)}, {lead.gpsLocation.longitude.toFixed(4)}
+                                    <ExternalLink className="w-2.5 h-2.5" />
+                                  </a>
+                                ) : (
+                                  <span className="text-[10px] text-slate-400 italic">Khách chưa cấp quyền GPS</span>
+                                )}
+                              </td>
+                              <td className="p-3 whitespace-nowrap">
+                                <div className="space-y-1">
+                                  {getStatusBadge(lead.status)}
+                                  <div>
+                                    <select
+                                      value={lead.status}
+                                      onChange={(e) => handleStatusChange(lead.id, e.target.value as CustomerLead["status"])}
+                                      className="text-[11px] bg-white border border-slate-300 rounded px-1.5 py-0.5 text-slate-700 cursor-pointer"
+                                    >
+                                      <option value="new">Mới</option>
+                                      <option value="contacted">Đã liên hệ</option>
+                                      <option value="surveyed">Đã khảo sát</option>
+                                      <option value="installed">Đã lắp đặt</option>
+                                      <option value="cancelled">Hủy</option>
+                                    </select>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="p-3 text-right whitespace-nowrap">
+                                <div className="flex items-center justify-end gap-1.5">
+                                  <a
+                                    href={`tel:${lead.phoneNumber}`}
+                                    title="Gọi ngay"
+                                    className="p-1.5 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 transition-colors"
+                                  >
+                                    <Phone className="w-3.5 h-3.5" />
+                                  </a>
+                                  <a
+                                    href={`https://zalo.me/${lead.phoneNumber.replace(/[^0-9]/g, "")}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    title="Mở Zalo"
+                                    className="p-1.5 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors text-[10px] font-bold"
+                                  >
+                                    Zalo
+                                  </a>
+                                  <button
+                                    onClick={() => handleDelete(lead.id)}
+                                    title="Xóa đơn"
+                                    className="p-1.5 bg-slate-100 text-slate-500 rounded-lg hover:bg-red-100 hover:text-red-600 transition-colors cursor-pointer"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   )}
                 </div>
               </div>
